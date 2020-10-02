@@ -1,0 +1,40 @@
+pipeline {
+	agent { 
+		docker { 
+			image 'python:3.8.2'
+			args '-u root -p 8000:8000'
+			} 
+		}
+    parameters {
+  text defaultValue: 'israel', description: 'please write a list of countries separated by comma', name: 'countryList'
+ }
+	stages {
+		stage('git') {
+			steps {
+                git branch: 'main', url: 'https://github.com/DorHayun/Covid_19_statistics.git'
+				sh 'pip install -r requirements.txt'
+				sh 'flask run --no-debugger --host 0.0.0.0 --port 8000 &'
+				
+			}
+		}
+		stage('querying the service') {
+			steps {
+                script {
+                         sh("sleep 3")
+                         countryListRaw = countryList.split(',')
+                         println(countryListRaw)
+			 countryListRaw.each {country -> 
+			 sh("curl -s localhost:8000/newCasesPeak?country=${country}")
+                         sh("curl -s localhost:8000/recoveredPeak?country=${country}")
+                         sh("curl -s localhost:8000/deathsPeak?country=${country}")
+                         
+                         }
+                         
+                    }
+                        
+
+
+			    }
+		}
+	}
+}
